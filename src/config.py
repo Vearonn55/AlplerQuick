@@ -73,9 +73,14 @@ def load_settings() -> Settings:
     if not catalogues_path.is_file():
         raise ValueError(f"CATALOGUES_CONFIG file not found: {catalogues_path}")
 
-    mode = os.environ.get("BOT_MODE", "polling").strip().lower()
+    # Empty BOT_MODE= in .env yields ""; treat as default polling.
+    # Accept "pooling" typo; strip quotes from copy-paste (BOT_MODE="polling").
+    raw_mode = (os.environ.get("BOT_MODE") or "polling").strip().strip('"').strip("'").lower()
+    mode = "polling" if raw_mode in ("polling", "pooling", "") else raw_mode
     if mode not in ("polling", "webhook"):
-        raise ValueError("BOT_MODE must be polling or webhook")
+        raise ValueError(
+            f"BOT_MODE must be polling or webhook (got {raw_mode!r}; did you mean 'polling' not 'pooling'?)"
+        )
 
     wh_base = os.environ.get("WEBHOOK_BASE_URL", "").strip().rstrip("/") or None
     wh_path = os.environ.get("WEBHOOK_PATH", "/telegram/webhook").strip()

@@ -21,6 +21,8 @@ def main() -> None:
         logging.error("Configuration error: %s", exc)
         sys.exit(1)
 
+    logging.info("WordPress REST base: %s/wp-json/wp/v2", settings.wp_base_url.rstrip("/"))
+
     application = build_application(settings)
 
     if settings.bot_mode == "webhook":

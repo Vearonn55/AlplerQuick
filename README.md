@@ -9,7 +9,7 @@ Catalog definitions (labels, which `href` to replace, upload filename) live in [
 
 ## WordPress setup
 
-1. **REST API** — `/wp-json/` must work with Application Password auth.
+1. **REST API** — `/wp-json/` must work with Application Password auth. The bot calls `https://YOUR-SITE/wp-json/wp/v2/...` (if media upload returns **404**, an old build may have used the wrong path; redeploy, or test with `curl -I "https://YOUR-SITE/wp-json/wp/v2/types"`).
 
 2. **Application password** — User must be able to **upload media** and **edit** the catalogues page (`WP_PAGE_ID`).
 
@@ -71,12 +71,19 @@ After changing the live HTML in WordPress, adjust markers if filenames or paths 
 
 ### 1. Install Docker on the server
 
-Ubuntu example:
+Ubuntu example — use **Compose V2** (`docker compose` with a **space**). The old `docker-compose` 1.x from apt often breaks on newer Docker with `KeyError: 'ContainerConfig'`.
 
 ```bash
 sudo apt update
 sudo apt install -y docker.io docker-compose-v2
 sudo systemctl enable --now docker
+docker compose version   # must work; use this, not docker-compose
+```
+
+If you still have the legacy `docker-compose` command and hit `ContainerConfig` errors, remove it and use only V2:
+
+```bash
+sudo apt remove -y docker-compose   # optional: drops python docker-compose 1.29.x
 ```
 
 Add your SSH user to the `docker` group if you avoid `sudo` (then log out and back in):
@@ -150,11 +157,14 @@ If you switch to webhook, set `BOT_MODE=webhook` and webhook env vars, uncomment
 
 ## Troubleshooting
 
+- **`KeyError: 'ContainerConfig'`** (during `docker-compose up`) — Your **`docker-compose` is version 1.x** and is incompatible with the current Docker Engine. Use **Compose V2**: `sudo apt install docker-compose-v2`, then always run **`docker compose`** (space, not hyphen). Clean up: `docker rm -f alplerquick 2>/dev/null; docker compose -f /opt/AlplerQuick/docker-compose.yml down` then `docker compose up -d --build` from the project directory.
+- **`BOT_MODE must be polling or webhook`** — Often **`BOT_MODE=pooling`** (wrong spelling). Use **`polling`** with two **l**’s. Also fix empty `BOT_MODE=` or stray quotes (`BOT_MODE="polling"` is OK; the app strips them).
 - **“.env” contains `server {` or `location`”** — That is nginx config; move it to `/etc/nginx/sites-available/installops-frontend.conf` (or your site file). Restore `.env` from `.env.example` and re-enter secrets.
 - **“No href containing … found”** — Live page HTML no longer contains that substring; sync `catalogues.json` with the editor or REST `content.raw`.
 - **“Multiple hrefs contain …”** — Use a longer, unique `href_marker`.
 - **Linearize errors** — PDF may be encrypted or corrupted; try another export.
 - **401 / 403** — Application password or capabilities; some hosts disable app passwords.
+- **Media upload 404** — (1) **Rebuild without cache** so the image includes `/wp-json/` in API URLs: `docker compose build --no-cache && docker compose up -d`. Verify: `docker compose exec alplerquick grep -n wp-json /app/src/wp_client.py` (should show `self._rest = .../wp-json/wp/v2`). (2) Wrong `WP_BASE_URL` (subdirectory install). (3) Security plugin/WAF returning fake 404 for REST uploads — test in browser or `curl -X POST` with Application Password.
 
 ## Old ACF-based flow
 
