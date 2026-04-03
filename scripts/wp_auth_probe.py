@@ -7,10 +7,16 @@ import asyncio
 import base64
 import json
 import os
+import sys
 import time
 from pathlib import Path
 
 import httpx
+
+# Running as `python scripts/wp_auth_probe.py` puts `scripts/` on sys.path, not project root.
+_ROOT = Path(__file__).resolve().parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
 # region agent log
 _SESSION = "3a85d6"
