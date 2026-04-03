@@ -1,0 +1,13 @@
+services:
+  alplerquick:
+    build: .
+    container_name: alplerquick
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./catalogues.json:/app/catalogues.json:ro
+    # Polling: leave ports commented (no inbound port).
+    # Webhook: uncomment and merge deploy/installops-telegram-webhook.fragment.conf into nginx
+    # ports:
+    #   - "127.0.0.1:8081:8080"

@@ -65,12 +65,92 @@ Each entry:
 
 After changing the live HTML in WordPress, adjust markers if filenames or paths change.
 
-## Production webhook
+## Deploy on VPS with Docker (polling)
 
-Set `BOT_MODE=webhook`, `WEBHOOK_BASE_URL`, and `WEBHOOK_PATH` so `WEBHOOK_BASE_URL` + `WEBHOOK_PATH` is the full HTTPS URL Telegram calls. Proxy to `PORT`. Optional `TELEGRAM_WEBHOOK_SECRET`.
+**Polling** means the container calls Telegram over **outbound HTTPS** only. You do **not** open a port or change nginx for the bot. (`kurulum.alplerltd.com` can stay as your InstallOps site only.)
+
+### 1. Install Docker on the server
+
+Ubuntu example:
+
+```bash
+sudo apt update
+sudo apt install -y docker.io docker-compose-v2
+sudo systemctl enable --now docker
+```
+
+Add your SSH user to the `docker` group if you avoid `sudo` (then log out and back in):
+
+```bash
+sudo usermod -aG docker $USER
+```
+
+### 2. Put the project on the server
+
+```bash
+sudo mkdir -p /opt/AlplerQuick
+sudo chown $USER:$USER /opt/AlplerQuick
+cd /opt/AlplerQuick
+git clone <your-repo-url> .
+# next time: cd /opt/AlplerQuick && git pull
+```
+
+### 3. Create `.env` (only variables, never nginx)
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+Fill at least:
+
+| Variable | Example / note |
+|----------|----------------|
+| `TELEGRAM_BOT_TOKEN` | From [@BotFather](https://t.me/BotFather) |
+| `ALLOWED_TELEGRAM_USER_IDS` | Your numeric ID(s), comma-separated |
+| `WP_BASE_URL` | `https://www.alplerltd.com` (no trailing slash) |
+| `WP_USERNAME` | WordPress user |
+| `WP_APPLICATION_PASSWORD` | Application password (spaces optional) |
+| `WP_PAGE_ID` | Catalogues page ID |
+| `BOT_MODE` | `polling` |
+
+Leave **webhook** variables commented out. **Do not** paste nginx `server {` blocks into `.env` — nginx belongs under `/etc/nginx/sites-available/`.
+
+### 4. Build and start the container
+
+Ensure `docker-compose.yml` has **no** `ports:` section uncommented (default for polling).
+
+```bash
+cd /opt/AlplerQuick
+docker compose build
+docker compose up -d
+docker compose logs -f
+```
+
+Stop following logs with `Ctrl+C`; the container keeps running.
+
+### 5. Verify
+
+- In Telegram, open your bot and send `/start`, then `/catalogues`, pick a row, send a test PDF (or skip PDF on production until ready).
+- If something fails, check: `docker compose logs --tail=100 alplerquick`
+
+### 6. After you change code or `catalogues.json`
+
+```bash
+cd /opt/AlplerQuick
+git pull
+docker compose up -d --build
+# If you only edited catalogues.json on disk:
+docker compose restart alplerquick
+```
+
+### Optional: webhook later
+
+If you switch to webhook, set `BOT_MODE=webhook` and webhook env vars, uncomment `ports` in `docker-compose.yml`, add [`deploy/installops-telegram-webhook.fragment.conf`](deploy/installops-telegram-webhook.fragment.conf) to nginx, then `sudo nginx -t && sudo systemctl reload nginx`.
 
 ## Troubleshooting
 
+- **“.env” contains `server {` or `location`”** — That is nginx config; move it to `/etc/nginx/sites-available/installops-frontend.conf` (or your site file). Restore `.env` from `.env.example` and re-enter secrets.
 - **“No href containing … found”** — Live page HTML no longer contains that substring; sync `catalogues.json` with the editor or REST `content.raw`.
 - **“Multiple hrefs contain …”** — Use a longer, unique `href_marker`.
 - **Linearize errors** — PDF may be encrypted or corrupted; try another export.
