@@ -12,5 +12,6 @@ RUN pip install --no-cache-dir --upgrade pip \
 COPY main.py ./
 COPY catalogues.json ./
 COPY src ./src
+COPY scripts ./scripts
 
 CMD ["python", "main.py"]
