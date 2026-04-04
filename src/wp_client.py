@@ -2,12 +2,44 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
 import httpx
 
 logger = logging.getLogger(__name__)
+
+
+def _wp_json_code(text: str) -> str | None:
+    try:
+        data = json.loads(text)
+        if isinstance(data, dict):
+            c = data.get("code")
+            return str(c) if c is not None else None
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return None
+
+
+def _hint_for_wp_error(code: str | None, *, context: str) -> str:
+    """Map WP REST error codes to actionable hints (not a substitute for fixing WP roles)."""
+    if code == "rest_cannot_create" and context == "media":
+        return (
+            " WordPress refused media upload: user lacks permission (needs upload_files). "
+            "In wp-admin set this user's role to Author, Editor, or Administrator, then create a new Application Password."
+        )
+    if code == "rest_cannot_create" and context == "page":
+        return (
+            " WordPress refused saving the page: user lacks edit permission for that page. "
+            "Use an Editor/Admin account or grant edit rights."
+        )
+    if code == "rest_not_logged_in":
+        return (
+            " WordPress did not accept credentials (rest_not_logged_in). "
+            "Check WP_USERNAME + Application Password, and .htaccess / server passing Authorization."
+        )
+    return ""
 
 class WordPressError(Exception):
     """Raised when WordPress returns an error response."""
@@ -65,6 +97,8 @@ class WordPressClient:
                 hint = " (URL missing /wp-json/? Rebuild image: docker compose build --no-cache.)"
             elif response.status_code == 404:
                 hint = " (404 often = security plugin blocking REST, or wrong site URL.)"
+            wp_code = _wp_json_code(response.text or "")
+            hint += _hint_for_wp_error(wp_code, context="media")
             detail = (response.text or "")[:400].replace("\n", " ")
             raise WordPressError(
                 f"Media upload failed ({response.status_code}){hint}" + (f" — {detail}" if detail else ""),
@@ -79,8 +113,10 @@ class WordPressClient:
             response = await client.get(url, auth=self._auth, params={"context": "edit"})
         if response.status_code != 200:
             logger.warning("WP get page failed: %s %s", response.status_code, response.text)
+            wp_code = _wp_json_code(response.text or "")
+            hint = _hint_for_wp_error(wp_code, context="page")
             raise WordPressError(
-                f"Could not load page ({response.status_code})",
+                f"Could not load page ({response.status_code}){hint}",
                 status_code=response.status_code,
                 body=response.text,
             )
@@ -106,8 +142,10 @@ class WordPressClient:
             )
         if response.status_code not in (200, 201):
             logger.warning("WP page patch failed: %s %s", response.status_code, response.text)
+            wp_code = _wp_json_code(response.text or "")
+            hint = _hint_for_wp_error(wp_code, context="page")
             raise WordPressError(
-                f"Page update failed ({response.status_code})",
+                f"Page update failed ({response.status_code}){hint}",
                 status_code=response.status_code,
                 body=response.text,
             )

@@ -164,6 +164,7 @@ If you switch to webhook, set `BOT_MODE=webhook` and webhook env vars, uncomment
 - **“Multiple hrefs contain …”** — Use a longer, unique `href_marker`.
 - **Linearize errors** — PDF may be encrypted or corrupted; try another export.
 - **401 / 403** — Application password or capabilities; some hosts disable app passwords.
+- **`rest_cannot_create` on media upload** — Not a Python bug: the WordPress user tied to the Application Password lacks **`upload_files`**. In **Kullanıcılar** set that account’s role to **Yazar** (Author) or **Editör** (Editor) / **Yönetici** (Admin), then create a **new** application password and update `.env`.
 - **Media upload 404** — (1) **Rebuild without cache** so the image includes `/wp-json/` in API URLs: `docker compose build --no-cache && docker compose up -d`. Verify: `docker compose exec alplerquick grep -n wp-json /app/src/wp_client.py` (should show `self._rest = .../wp-json/wp/v2`). (2) Wrong `WP_BASE_URL` (subdirectory install). (3) Security plugin/WAF returning fake 404 for REST uploads — test in browser or `curl -X POST` with Application Password.
 
 ## Old ACF-based flow
