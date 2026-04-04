@@ -81,9 +81,18 @@ class WordPressClient:
         content_type: str = "application/pdf",
     ) -> dict[str, Any]:
         url = f"{self._rest}/media"
-        files = {"file": (filename, file_bytes, content_type)}
+        safe_name = filename.replace('"', "_")
+        headers = {
+            "Content-Disposition": f'attachment; filename="{safe_name}"',
+            "Content-Type": content_type,
+        }
         async with self._client() as client:
-            response = await client.post(url, auth=self._auth, files=files)
+            response = await client.post(
+                url,
+                auth=self._auth,
+                headers=headers,
+                content=file_bytes,
+            )
         if response.status_code not in (200, 201):
             logger.warning(
                 "WP media upload failed: url=%s final_url=%s status=%s body=%s",
@@ -99,7 +108,7 @@ class WordPressClient:
                 hint = " (404 often = security plugin blocking REST, or wrong site URL.)"
             wp_code = _wp_json_code(response.text or "")
             hint += _hint_for_wp_error(wp_code, context="media")
-            detail = (response.text or "")[:400].replace("\n", " ")
+            detail = (response.text or "")[:300].replace("\n", " ")
             raise WordPressError(
                 f"Media upload failed ({response.status_code}){hint}" + (f" — {detail}" if detail else ""),
                 status_code=response.status_code,
