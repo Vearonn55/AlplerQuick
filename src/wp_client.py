@@ -81,18 +81,10 @@ class WordPressClient:
         content_type: str = "application/pdf",
     ) -> dict[str, Any]:
         url = f"{self._rest}/media"
-        safe_name = filename.replace('"', "_")
-        headers = {
-            "Content-Disposition": f'attachment; filename="{safe_name}"',
-            "Content-Type": content_type,
-        }
+        # WordPress REST expects multipart/form-data with field name "file" (raw body POST is not supported).
+        files = {"file": (filename, file_bytes, content_type)}
         async with self._client() as client:
-            response = await client.post(
-                url,
-                auth=self._auth,
-                headers=headers,
-                content=file_bytes,
-            )
+            response = await client.post(url, auth=self._auth, files=files)
         if response.status_code not in (200, 201):
             logger.warning(
                 "WP media upload failed: url=%s final_url=%s status=%s body=%s",
