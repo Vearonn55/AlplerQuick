@@ -2,43 +2,43 @@
   {
     "id": "weltew_home",
     "label": "Weltew Home",
-    "href_marker": "weltew_2026-linearized.pdf",
+    "selector": "weltew-home",
     "upload_filename": "weltew_2026-linearized.pdf"
   },
   {
     "id": "weltew_yatak",
     "label": "Weltew Yatak",
-    "href_marker": "WELTEW-YATAK-2025-L.pdf",
+    "selector": "weltew-yatak",
     "upload_filename": "WELTEW-YATAK-2025-L.pdf"
   },
   {
     "id": "baba_koltuk",
     "label": "Baba Koltukları",
-    "href_marker": "Avrasya-Koltuk-linearized.pdf",
+    "selector": "baba-koltuklari",
     "upload_filename": "Avrasya-Koltuk-linearized.pdf"
   },
   {
     "id": "masa_sandalye",
     "label": "Masa ve Sandalyeler",
-    "href_marker": "Dengema_2026-linearized.pdf",
+    "selector": "masa-sandalyeler",
     "upload_filename": "Dengema_2026-linearized.pdf"
   },
   {
     "id": "sehpalar",
     "label": "Sehpalar",
-    "href_marker": "Taba-Home-2025-L.pdf",
+    "selector": "sehpalar",
     "upload_filename": "Taba-Home-2025-L.pdf"
   },
   {
     "id": "bahce",
     "label": "Bahçe Mobilyaları",
-    "href_marker": "Novussi-2026-Catalogue_linearized.pdf",
+    "selector": "bahce-mobilyalari",
     "upload_filename": "Novussi-2026-Catalogue_linearized.pdf"
   },
   {
     "id": "ev_dekor",
     "label": "Ev Dekorasyon Ürünleri",
-    "href_marker": "Ozverler-Katalog-linearized.pdf",
+    "selector": "ev-dekorasyon",
     "upload_filename": "Ozverler-Katalog-linearized.pdf"
   }
 ]

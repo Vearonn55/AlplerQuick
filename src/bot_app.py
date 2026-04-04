@@ -10,7 +10,7 @@ from telegram.ext import Application, CallbackQueryHandler, CommandHandler, Cont
 
 from src.catalogues import CatalogueEntry, by_id, load_catalogues
 from src.config import Settings
-from src.html_replace import HrefReplaceError, replace_href_by_marker
+from src.html_replace import HrefReplaceError, replace_href_by_selector
 from src.pdf_linearize import LinearizeError, linearize_pdf_bytes
 from src.wp_client import WordPressClient, WordPressError
 
@@ -152,7 +152,7 @@ async def on_document(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             raise WordPressError("Upload succeeded but no source_url in response")
 
         raw = await wp.get_page_raw_content(settings.wp_page_id)
-        updated = replace_href_by_marker(raw, entry.href_marker, source_url)
+        updated = replace_href_by_selector(raw, entry.selector, source_url)
         await wp.patch_page_raw_content(settings.wp_page_id, updated)
     except (WordPressError, HrefReplaceError) as exc:
         await update.message.reply_text(f"WordPress/HTML error: {exc}")

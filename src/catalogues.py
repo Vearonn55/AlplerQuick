@@ -1,4 +1,4 @@
-"""Load catalogue definitions for HTML href replacement."""
+"""Load catalogue definitions for HTML href replacement (data-catalogue selectors)."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from pathlib import Path
 class CatalogueEntry:
     id: str
     label: str
-    href_marker: str
+    selector: str
     upload_filename: str
 
 
@@ -25,11 +25,11 @@ def load_catalogues(path: Path) -> list[CatalogueEntry]:
             raise ValueError(f"catalogues.json[{i}] must be an object")
         cid = str(item["id"]).strip()
         label = str(item["label"]).strip()
-        marker = str(item["href_marker"]).strip()
-        upload = str(item.get("upload_filename") or marker).strip()
-        if not cid or not label or not marker:
-            raise ValueError(f"catalogues.json[{i}] needs id, label, href_marker")
-        out.append(CatalogueEntry(id=cid, label=label, href_marker=marker, upload_filename=upload))
+        selector = str(item["selector"]).strip()
+        upload = str(item.get("upload_filename") or cid).strip()
+        if not cid or not label or not selector:
+            raise ValueError(f"catalogues.json[{i}] needs id, label, selector")
+        out.append(CatalogueEntry(id=cid, label=label, selector=selector, upload_filename=upload))
     if not out:
         raise ValueError("catalogues.json must contain at least one entry")
     return out

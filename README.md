@@ -3,9 +3,9 @@
 Flow for authorized users:
 
 1. **`/catalogues`** — pick which catalog row to update (inline buttons).
-2. **Send a PDF** — the bot **linearizes** it (fast web view), uploads to the WordPress **Media Library**, then **replaces the matching `href`** inside the catalogues page content (Custom HTML / HTML block).
+2. **Send a PDF** — the bot **linearizes** it (fast web view), uploads to the WordPress **Media Library**, then **replaces the `href`** on the anchor that has matching **`data-catalogue="..."`** in the catalogues page HTML.
 
-Catalog definitions (labels, which `href` to replace, upload filename) live in [`catalogues.json`](catalogues.json). Edit that file if URLs or titles change.
+Catalog definitions (`selector` ↔ `data-catalogue`, labels, upload filename) live in [`catalogues.json`](catalogues.json).
 
 ## WordPress setup
 
@@ -13,7 +13,9 @@ Catalog definitions (labels, which `href` to replace, upload filename) live in [
 
 2. **Application password** — User must be able to **upload media** and **edit** the catalogues page (`WP_PAGE_ID`).
 
-3. **Page content** — The bot loads `GET /wp/v2/pages/{id}?context=edit` and patches `content` with the same string, only changing one `href="..."` that contains the configured **`href_marker`** (usually the PDF filename). If you change filenames in WordPress, update `href_marker` and `upload_filename` in `catalogues.json`.
+3. **Page content** — Mark each catalog link in the HTML block with a stable attribute, e.g.  
+   `<a data-catalogue="bahce-mobilyalari" href="https://.../file.pdf">…</a>`.  
+   The value must match **`selector`** in [`catalogues.json`](catalogues.json). The bot only changes **`href`**; PDF filenames and URLs can change freely. Attribute order `href` vs `data-catalogue` can be either way.
 
 4. **Find the page ID** — In the editor URL: `post=123` → `WP_PAGE_ID=123`.
 
@@ -60,10 +62,8 @@ Each entry:
 
 - **`id`** — internal key for callbacks (ASCII, short).
 - **`label`** — button text in Telegram.
-- **`href_marker`** — unique substring of the current PDF URL in the page HTML (must match exactly once).
-- **`upload_filename`** — filename used on upload (optional; defaults to marker if omitted).
-
-After changing the live HTML in WordPress, adjust markers if filenames or paths change.
+- **`selector`** — must equal `data-catalogue="..."` on the catalog `<a>` in WordPress (unique per row).
+- **`upload_filename`** — filename used on WordPress media upload (optional; defaults to `id` if omitted).
 
 ## Deploy on VPS with Docker (polling)
 
@@ -160,8 +160,8 @@ If you switch to webhook, set `BOT_MODE=webhook` and webhook env vars, uncomment
 - **`KeyError: 'ContainerConfig'`** (during `docker-compose up`) — Your **`docker-compose` is version 1.x** and is incompatible with the current Docker Engine. Use **Compose V2**: `sudo apt install docker-compose-v2`, then always run **`docker compose`** (space, not hyphen). Clean up: `docker rm -f alplerquick 2>/dev/null; docker compose -f /opt/AlplerQuick/docker-compose.yml down` then `docker compose up -d --build` from the project directory.
 - **`BOT_MODE must be polling or webhook`** — Often **`BOT_MODE=pooling`** (wrong spelling). Use **`polling`** with two **l**’s. Also fix empty `BOT_MODE=` or stray quotes (`BOT_MODE="polling"` is OK; the app strips them).
 - **“.env” contains `server {` or `location`”** — That is nginx config; move it to `/etc/nginx/sites-available/installops-frontend.conf` (or your site file). Restore `.env` from `.env.example` and re-enter secrets.
-- **“No href containing … found”** — Live page HTML no longer contains that substring; sync `catalogues.json` with the editor or REST `content.raw`.
-- **“Multiple hrefs contain …”** — Use a longer, unique `href_marker`.
+- **No `data-catalogue="..."` match** — Add `data-catalogue` to the catalog `<a>` in WordPress and set the same value as **`selector`** in `catalogues.json`.
+- **Multiple matching `<a>` tags** — Each `selector` must be unique on the page.
 - **Linearize errors** — PDF may be encrypted or corrupted; try another export.
 - **401 / 403** — Application password or capabilities; some hosts disable app passwords.
 - **`rest_cannot_create` on media upload** — Not a Python bug: the WordPress user tied to the Application Password lacks **`upload_files`**. In **Kullanıcılar** set that account’s role to **Yazar** (Author) or **Editör** (Editor) / **Yönetici** (Admin), then create a **new** application password and update `.env`.
