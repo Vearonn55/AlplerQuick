@@ -20,7 +20,7 @@ MESSAGES: dict[str, dict[str, str]] = {
             "If your PDF is larger, compress or split it before sending.\n\n"
             "/start — show this help again\n"
             "/cancel — clear your catalog selection\n"
-            "/language — choose English or Turkish (or /dil)"
+            "/language or /dil — open the language menu (tap a button)"
         ),
         "not_authorized": "You are not authorized. Use /start to see what this bot does.",
         "not_authorized_upload": (
@@ -64,20 +64,20 @@ MESSAGES: dict[str, dict[str, str]] = {
             "This bot only accepts PDF documents after you pick a catalogue. "
             "Use /start for step-by-step help and the 20 MB file limit, then /catalogues."
         ),
-        "language_current_auto": (
-            "Language follows your Telegram app (currently: {lang}).\n"
-            "Override: /language en or /language tr — reset with /language auto"
+        "language_menu_intro": "Choose the language for bot messages.",
+        "language_menu_from_tg": "Active: Telegram app language → {lang}",
+        "language_menu_fixed": "Active: fixed to {lang}",
+        "language_menu_hint": "Tap a button. You can open this again anytime with /language or /dil.",
+        "language_btn_en": "English",
+        "language_btn_tr": "Türkçe",
+        "language_btn_auto": "Use Telegram language",
+        "language_help_unknown": (
+            "Unknown option. Use the buttons below, or type:\n"
+            "/language en · /language tr · /language auto"
         ),
-        "language_current_fixed": "Bot language is set to: {lang}.\nReset with /language auto",
-        "language_set_en": "Language set to English.",
-        "language_set_tr": "Language set to Turkish.",
-        "language_auto": "Language will follow your Telegram app settings again.",
-        "language_help": (
-            "Usage: /language en — English\n"
-            "/language tr — Turkish\n"
-            "/language auto — use Telegram app language\n"
-            "Alias: /dil"
-        ),
+        "language_toast_en": "English selected",
+        "language_toast_tr": "Türkçe selected",
+        "language_toast_auto": "Using Telegram language",
         "lang_en": "English",
         "lang_tr": "Turkish",
     },
@@ -91,7 +91,7 @@ MESSAGES: dict[str, dict[str, str]] = {
             "PDF daha büyükse göndermeden önce sıkıştırın veya bölün.\n\n"
             "/start — bu yardımı tekrar gösterir\n"
             "/cancel — katalog seçimini temizler\n"
-            "/language veya /dil — dil seçimi (İngilizce/Türkçe)"
+            "/language veya /dil — dil menüsü (düğmelere dokunun)"
         ),
         "not_authorized": "Yetkiniz yok. Botun ne yaptığını görmek için /start kullanın.",
         "not_authorized_upload": (
@@ -135,20 +135,20 @@ MESSAGES: dict[str, dict[str, str]] = {
             "Bu bot yalnızca katalog seçtikten sonra PDF belgelerini kabul eder. "
             "Adım adım yardım ve 20 MB dosya sınırı için /start, ardından /catalogues kullanın."
         ),
-        "language_current_auto": (
-            "Dil, Telegram uygulamanıza göre ayarlanıyor (şu an: {lang}).\n"
-            "Zorla: /language en veya /language tr — sıfırlamak için /language auto"
+        "language_menu_intro": "Bot mesajları için dil seçin.",
+        "language_menu_from_tg": "Aktif: Telegram uygulama dili → {lang}",
+        "language_menu_fixed": "Aktif: sabit — {lang}",
+        "language_menu_hint": "Bir düğmeye dokunun. Menüyü istediğiniz zaman /language veya /dil ile açabilirsiniz.",
+        "language_btn_en": "English",
+        "language_btn_tr": "Türkçe",
+        "language_btn_auto": "Telegram dilini kullan",
+        "language_help_unknown": (
+            "Tanınmayan seçenek. Aşağıdaki düğmeleri kullanın veya yazın:\n"
+            "/language en · /language tr · /language auto"
         ),
-        "language_current_fixed": "Bot dili: {lang}.\nSıfırlamak için /language auto",
-        "language_set_en": "Dil İngilizce olarak ayarlandı.",
-        "language_set_tr": "Dil Türkçe olarak ayarlandı.",
-        "language_auto": "Dil tekrar Telegram uygulama ayarlarınıza göre belirlenecek.",
-        "language_help": (
-            "Kullanım: /language en — İngilizce\n"
-            "/language tr — Türkçe\n"
-            "/language auto — Telegram diline dön\n"
-            "Kısayol: /dil"
-        ),
+        "language_toast_en": "İngilizce seçildi",
+        "language_toast_tr": "Türkçe seçildi",
+        "language_toast_auto": "Telegram dili kullanılıyor",
         "lang_en": "İngilizce",
         "lang_tr": "Türkçe",
     },

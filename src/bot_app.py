@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import unicodedata
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.error import BadRequest
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters
 
 from src.catalogues import CatalogueEntry, by_id, load_catalogues
@@ -19,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 PDF_MIME = "application/pdf"
 CALLBACK_PREFIX = "c:"
+LANG_CALLBACK_PREFIX = "lang:"
 USER_DATA_CATALOG = "pending_catalog_id"
 # Telegram Bot API (api.telegram.org) refuses downloads over this size.
 TELEGRAM_BOT_MAX_DOWNLOAD_BYTES = 20 * 1024 * 1024
@@ -41,6 +44,56 @@ def _catalogue_keyboard(entries: list[CatalogueEntry]) -> InlineKeyboardMarkup:
 
 def _authorized(user_id: int | None, settings: Settings) -> bool:
     return user_id is not None and user_id in settings.allowed_telegram_user_ids
+
+
+def _fold_ascii(s: str) -> str:
+    """Lowercase for language aliases; strips combining marks so Turkish input matches reliably."""
+    s = unicodedata.normalize("NFKD", s.strip())
+    return "".join(c for c in s if unicodedata.category(c) != "Mn").lower()
+
+
+def _parse_lang_arg(raw: str) -> str | None:
+    f = _fold_ascii(raw)
+    if f in ("en", "english", "ingilizce"):
+        return "en"
+    if f in ("tr", "turkish", "turkce"):
+        return "tr"
+    if f in ("auto", "otomatik", "reset", "telegram"):
+        return "auto"
+    return None
+
+
+def _apply_language_choice(context: ContextTypes.DEFAULT_TYPE, choice: str) -> None:
+    if choice == "en":
+        context.user_data[USER_DATA_LOCALE] = "en"
+    elif choice == "tr":
+        context.user_data[USER_DATA_LOCALE] = "tr"
+    elif choice == "auto":
+        context.user_data.pop(USER_DATA_LOCALE, None)
+
+
+def _language_menu_text(context: ContextTypes.DEFAULT_TYPE, user, loc: str) -> str:
+    override = context.user_data.get(USER_DATA_LOCALE)
+    lines = [t(loc, "language_menu_intro"), ""]
+    if override in ("en", "tr"):
+        lines.append(t(loc, "language_menu_fixed", lang=t(loc, f"lang_{override}")))
+    else:
+        auto = locale_from_telegram(user)
+        lines.append(t(loc, "language_menu_from_tg", lang=t(loc, f"lang_{auto}")))
+    lines.extend(["", t(loc, "language_menu_hint")])
+    return "\n".join(lines)
+
+
+def _language_keyboard(loc: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(t(loc, "language_btn_en"), callback_data=f"{LANG_CALLBACK_PREFIX}en"),
+                InlineKeyboardButton(t(loc, "language_btn_tr"), callback_data=f"{LANG_CALLBACK_PREFIX}tr"),
+            ],
+            [InlineKeyboardButton(t(loc, "language_btn_auto"), callback_data=f"{LANG_CALLBACK_PREFIX}auto")],
+        ]
+    )
 
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -185,39 +238,46 @@ async def on_plain_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     await update.message.reply_text(t(loc, "plain_text_nudge"))
 
 
+async def on_language_pick(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if not query:
+        return
+    data = query.data or ""
+    choice = data[len(LANG_CALLBACK_PREFIX) :] if data.startswith(LANG_CALLBACK_PREFIX) else ""
+    if choice not in ("en", "tr", "auto"):
+        await query.answer()
+        return
+    user = query.from_user
+    _apply_language_choice(context, choice)
+    loc = effective_locale(context, user)
+    toast_key = "language_toast_auto" if choice == "auto" else f"language_toast_{choice}"
+    await query.answer(t(loc, toast_key)[:200])
+    body = _language_menu_text(context, user, loc)
+    try:
+        await query.edit_message_text(body, reply_markup=_language_keyboard(loc))
+    except BadRequest as exc:
+        if "message is not modified" not in str(exc).lower():
+            raise
+
+
 async def cmd_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message:
         return
     user = update.effective_user
+    loc_before = effective_locale(context, user)
+    args = context.args or []
+    parsed_any = False
+    for raw in args:
+        choice = _parse_lang_arg(raw)
+        if choice:
+            _apply_language_choice(context, choice)
+            parsed_any = True
+            break
     loc = effective_locale(context, user)
-    args = [a.lower() for a in (context.args or [])]
-    if not args:
-        override = context.user_data.get(USER_DATA_LOCALE)
-        if override in ("en", "tr"):
-            await update.message.reply_text(
-                t(loc, "language_current_fixed", lang=t(loc, f"lang_{override}")),
-            )
-        else:
-            auto = locale_from_telegram(user)
-            await update.message.reply_text(
-                t(loc, "language_current_auto", lang=t(loc, f"lang_{auto}")),
-            )
-        return
-    arg = args[0]
-    if arg in ("en", "english", "ingilizce"):
-        context.user_data[USER_DATA_LOCALE] = "en"
-        await update.message.reply_text(t("en", "language_set_en"))
-        return
-    if arg in ("tr", "turkish", "turkce", "türkçe"):
-        context.user_data[USER_DATA_LOCALE] = "tr"
-        await update.message.reply_text(t("tr", "language_set_tr"))
-        return
-    if arg in ("auto", "otomatik", "reset"):
-        context.user_data.pop(USER_DATA_LOCALE, None)
-        loc2 = effective_locale(context, user)
-        await update.message.reply_text(t(loc2, "language_auto"))
-        return
-    await update.message.reply_text(t(loc, "language_help"))
+    body = _language_menu_text(context, user, loc)
+    if args and not parsed_any:
+        body = t(loc_before, "language_help_unknown") + "\n\n" + body
+    await update.message.reply_text(body, reply_markup=_language_keyboard(loc))
 
 
 def build_application(settings: Settings) -> Application:
@@ -238,6 +298,7 @@ def build_application(settings: Settings) -> Application:
     app.add_handler(CommandHandler("cancel", cmd_cancel))
     app.add_handler(CommandHandler("language", cmd_language))
     app.add_handler(CommandHandler("dil", cmd_language))
+    app.add_handler(CallbackQueryHandler(on_language_pick, pattern=r"^lang:"))
     app.add_handler(CallbackQueryHandler(on_catalogue_pick, pattern=r"^c:"))
     app.add_handler(MessageHandler(filters.Document.ALL, on_document))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_plain_text))

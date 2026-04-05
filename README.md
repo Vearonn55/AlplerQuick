@@ -27,7 +27,7 @@ Catalog definitions (`selector` ↔ `data-catalogue`, labels, upload filename) l
 
 3. **File size** — The official Bot API (`api.telegram.org`) only allows bots to **download files up to about 20 MB**. Larger PDFs must be compressed or split before sending (or use a [local Bot API server](https://core.telegram.org/bots/api#using-a-local-bot-api-server) if you self-host and raise limits). The bot pre-checks `file_size` when Telegram sends it and mentions this limit in `/start`.
 
-4. **Language** — Replies follow the user’s Telegram **language** when it is Turkish (`tr` / `tr-TR`); otherwise English. Users can override with **`/language en`**, **`/language tr`**, or reset with **`/language auto`**. The same handler is available as **`/dil`**. Strings live in [`src/i18n.py`](src/i18n.py); command names stay `/start`, `/catalogues`, etc.
+4. **Language** — Replies follow the user’s Telegram **language** when it is Turkish (`tr` / `tr-TR`); otherwise English. **`/language`** or **`/dil`** opens an **inline button menu** (English / Türkçe / match Telegram). Optional text args still work: `/language en`, `tr`, `auto` (Turkish spellings are normalized). Copy lives in [`src/i18n.py`](src/i18n.py); command names stay `/start`, `/catalogues`, etc.
 
 ## Run locally
 
