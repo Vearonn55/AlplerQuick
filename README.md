@@ -11,7 +11,7 @@ Catalog definitions (`selector` ↔ `data-catalogue`, labels, upload filename) l
 
 1. **REST API** — `/wp-json/` must work with Application Password auth. The bot calls `https://YOUR-SITE/wp-json/wp/v2/...` (if media upload returns **404**, an old build may have used the wrong path; redeploy, or test with `curl -I "https://YOUR-SITE/wp-json/wp/v2/types"`).
 
-2. **Application password** — User must be able to **upload media** and **edit** the catalogues page (`WP_PAGE_ID`).
+2. **Application password** — User must be able to **upload media** and **edit** the catalogues page (`WP_PAGE_ID`). If uploads fail with HTTP 413 or generic errors, raise PHP limits on the server (`upload_max_filesize`, `post_max_size` in `php.ini` or the host panel) above your largest PDF.
 
 3. **Page content** — Mark each catalog link in the HTML block with a stable attribute, e.g.  
    `<a data-catalogue="bahce-mobilyalari" href="https://.../file.pdf">…</a>`.  
@@ -24,6 +24,10 @@ Catalog definitions (`selector` ↔ `data-catalogue`, labels, upload filename) l
 1. Bot token from [@BotFather](https://t.me/BotFather).
 
 2. Your numeric user ID in `ALLOWED_TELEGRAM_USER_IDS` (e.g. [@userinfobot](https://t.me/userinfobot)).
+
+3. **File size** — The official Bot API (`api.telegram.org`) only allows bots to **download files up to about 20 MB**. Larger PDFs must be compressed or split before sending (or use a [local Bot API server](https://core.telegram.org/bots/api#using-a-local-bot-api-server) if you self-host and raise limits). The bot pre-checks `file_size` when Telegram sends it and mentions this limit in `/start`.
+
+4. **Language** — Replies follow the user’s Telegram **language** when it is Turkish (`tr` / `tr-TR`); otherwise English. Users can override with **`/language en`**, **`/language tr`**, or reset with **`/language auto`**. The same handler is available as **`/dil`**. Strings live in [`src/i18n.py`](src/i18n.py); command names stay `/start`, `/catalogues`, etc.
 
 ## Run locally
 
