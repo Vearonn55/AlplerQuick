@@ -72,6 +72,30 @@ def _apply_language_choice(context: ContextTypes.DEFAULT_TYPE, choice: str) -> N
         context.user_data.pop(USER_DATA_LOCALE, None)
 
 
+def _language_prefs_snapshot(context: ContextTypes.DEFAULT_TYPE, user) -> tuple[object, str]:
+    return (context.user_data.get(USER_DATA_LOCALE), effective_locale(context, user))
+
+
+def _language_prefs_changed(before: tuple[object, str], context: ContextTypes.DEFAULT_TYPE, user) -> tuple[bool, str]:
+    """Returns (changed, locale_after)."""
+    ov_b, loc_b = before
+    ov_a = context.user_data.get(USER_DATA_LOCALE)
+    loc_a = effective_locale(context, user)
+    return (ov_b != ov_a or loc_b != loc_a), loc_a
+
+
+async def _reply_start_if_language_changed(
+    context: ContextTypes.DEFAULT_TYPE,
+    user,
+    before: tuple[object, str],
+    reply_target,
+) -> None:
+    """Send /start-equivalent text when override or effective locale changed."""
+    changed, loc_after = _language_prefs_changed(before, context, user)
+    if changed and reply_target is not None:
+        await reply_target.reply_text(t(loc_after, "start"))
+
+
 def _language_menu_text(context: ContextTypes.DEFAULT_TYPE, user, loc: str) -> str:
     override = context.user_data.get(USER_DATA_LOCALE)
     lines = [t(loc, "language_menu_intro"), ""]
@@ -248,6 +272,7 @@ async def on_language_pick(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await query.answer()
         return
     user = query.from_user
+    before = _language_prefs_snapshot(context, user)
     _apply_language_choice(context, choice)
     loc = effective_locale(context, user)
     toast_key = "language_toast_auto" if choice == "auto" else f"language_toast_{choice}"
@@ -258,13 +283,15 @@ async def on_language_pick(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     except BadRequest as exc:
         if "message is not modified" not in str(exc).lower():
             raise
+    await _reply_start_if_language_changed(context, user, before, query.message)
 
 
 async def cmd_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message:
         return
     user = update.effective_user
-    loc_before = effective_locale(context, user)
+    before_snap = _language_prefs_snapshot(context, user)
+    loc_before = before_snap[1]
     args = context.args or []
     parsed_any = False
     for raw in args:
@@ -278,6 +305,8 @@ async def cmd_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if args and not parsed_any:
         body = t(loc_before, "language_help_unknown") + "\n\n" + body
     await update.message.reply_text(body, reply_markup=_language_keyboard(loc))
+    if parsed_any:
+        await _reply_start_if_language_changed(context, user, before_snap, update.message)
 
 
 def build_application(settings: Settings) -> Application:
